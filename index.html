@@ -344,14 +344,11 @@ let ANDARES;
   const response = await fetch("https://script.google.com/macros/s/AKfycbzobsm_cDnvE242xioJUoeZSQF5BAqTjxN74j-FyzkzgsYWuv8oGv9TkIy3bmJ-x-Uv0A/exec?acao=dados");
   const dados = await response.json();
   pavimentos = parseTabela(dados.andares);
-
+  ANDARES = pavimentos.map(a => a.Andar);
   inicializarApp();
 })();
 
 function inicializarApp() {
-  //console.log(pavimentos); //disponível
-  ANDARES = pavimentos.map(a => a.Andar);
-  
   initD();
   console.log(ANDARES); //disponível
 }
