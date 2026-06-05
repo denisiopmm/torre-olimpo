@@ -329,7 +329,13 @@ img{display:block}
 
 <script>
 //const ANDARES=['Lobby','3° Andar','4° Andar','5° Andar','6° Andar','7° Andar','8° Andar','9° Andar','10° Andar','11° Andar','12° Andar','13° Andar','14° Andar','15° Andar','16° Andar','17° Andar','18° Andar','19° Andar','20° Andar','21° Andar','22° Andar','23° Andar','24° Andar','25° Andar','26° Andar','27° Andar','28° Andar','29° Andar'];
-
+// Função utilitária para converter array de arrays em array de objetos
+function parseTabela(arrayDeArrays) {
+  const [cabecalho, ...linhas] = arrayDeArrays;
+  return linhas.map(linha =>
+    Object.fromEntries(cabecalho.map((col, i) => [col, linha[i]]))
+  );
+}
 fetch("https://script.google.com/macros/s/AKfycbzobsm_cDnvE242xioJUoeZSQF5BAqTjxN74j-FyzkzgsYWuv8oGv9TkIy3bmJ-x-Uv0A/exec?acao=dados")
   .then(res => res.json())
   .then(dados => {
