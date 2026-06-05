@@ -328,13 +328,20 @@ img{display:block}
 </div>
 
 <script>
-const ANDARES=['Lobby','3° Andar','4° Andar','5° Andar','6° Andar','7° Andar','8° Andar','9° Andar','10° Andar','11° Andar','12° Andar','13° Andar','14° Andar','15° Andar','16° Andar','17° Andar','18° Andar','19° Andar','20° Andar','21° Andar','22° Andar','23° Andar','24° Andar','25° Andar','26° Andar','27° Andar','28° Andar','29° Andar'];
+//const ANDARES=['Lobby','3° Andar','4° Andar','5° Andar','6° Andar','7° Andar','8° Andar','9° Andar','10° Andar','11° Andar','12° Andar','13° Andar','14° Andar','15° Andar','16° Andar','17° Andar','18° Andar','19° Andar','20° Andar','21° Andar','22° Andar','23° Andar','24° Andar','25° Andar','26° Andar','27° Andar','28° Andar','29° Andar'];
+
+const API ="https://script.google.com/macros/s/AKfycbzobsm_cDnvE242xioJUoeZSQF5BAqTjxN74j-FyzkzgsYWuv8oGv9TkIy3bmJ-x-Uv0A/exec";
+const ANDARES = API.andares
+  .slice(1)      // remove o cabeçalho
+  .map(linha => linha[1]);
+
+
 const ETAPAS=['Abertura da parede','Fechamento shaft','Fechamento parede','Fechamento lógica','Pintura'];
 const DATAS={'Lobby':'2026-06-02','3° Andar':'2026-06-02','4° Andar':'2026-06-03','5° Andar':'2026-06-04','6° Andar':'2026-06-05','7° Andar':'2026-06-06','8° Andar':'2026-06-07','9° Andar':'2026-06-08','10° Andar':'2026-06-09','11° Andar':'2026-06-10','12° Andar':'2026-06-11','13° Andar':'2026-06-12','14° Andar':'2026-06-13','15° Andar':'2026-06-14','16° Andar':'2026-06-15','17° Andar':'2026-06-16','18° Andar':'2026-06-17','19° Andar':'2026-06-18','20° Andar':'2026-06-19','21° Andar':'2026-06-20','22° Andar':'2026-06-21','23° Andar':'2026-06-22','24° Andar':'2026-06-23','25° Andar':'2026-06-24','26° Andar':'2026-06-25','27° Andar':'2026-06-26','28° Andar':'2026-06-27','29° Andar':'2026-06-28'};
 const ICONS={'Abertura da parede':'ti-wall','Fechamento shaft':'ti-door','Fechamento parede':'ti-barrier-block','Fechamento lógica':'ti-plug-connected','Pintura':'ti-paint'};
 const today=new Date();today.setHours(0,0,0,0);
 const todayStr=today.toISOString().slice(0,10);
-const API ="https://script.google.com/macros/s/AKfycbzobsm_cDnvE242xioJUoeZSQF5BAqTjxN74j-FyzkzgsYWuv8oGv9TkIy3bmJ-x-Uv0A/exec";
+
 document.getElementById('today-label').textContent=today.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
 
 let D={};
