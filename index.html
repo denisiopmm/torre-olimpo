@@ -348,14 +348,6 @@ let ANDARES;
   inicializarApp();
 })();
 
-function inicializarApp() {
-  initD();
-  console.log(ANDARES); //disponível
-}
-
-
-
-
 
   
 const ETAPAS=['Abertura da parede','Fechamento shaft','Fechamento parede','Fechamento lógica','Pintura'];
@@ -647,7 +639,13 @@ function showPage(n){
   if(n==='relatorio')renderRelChecklist();
 }
 function renderAll(){renderAndamento();renderDashboard();renderAlertas();renderFotos();}
-initD();renderAll();
+
+function inicializarApp() {
+  initD();renderAll();
+  console.log(ANDARES); //disponível
+}
+  
+//initD();renderAll();
 </script>
 </body>
 </html>
