@@ -414,7 +414,7 @@ img{display:block}
 // ═══════════════════════════════════════════════════════════════
 //  CONFIGURAÇÃO — cole sua URL do Apps Script aqui ou via Config
 // ═══════════════════════════════════════════════════════════════
-let GAS_URL   = localStorage.getItem('gasUrl')    || 'https://script.google.com/macros/s/AKfycbyDuBeHY9jbpiWp-f0bx1aSstyg7dD4d8qLixLZozPVzBjjENOMEfGcqyr0GrDjoKIIRA/exec';
+let GAS_URL   = localStorage.getItem('gasUrl')    || 'https://script.google.com/macros/s/AKfycbw6PHXMwSD87OyL5oV_78cK5JxIyVHyjmVGMoM4uvtdt1X9mg3m6Q98FKiNRz8y2S9fOg/exec';
 let SHEET_ID  = localStorage.getItem('sheetId')  || '1gUuKMISwMk2AKMn6S7jS2bZaNs6_g867noSWs1Ogw-U';
 let CFG_USER  = localStorage.getItem('gasUser')  || '';
 
@@ -788,10 +788,11 @@ function renderAndamento(){
       <div class="floor-body" id="fb-${id}">`;
     ets.forEach(e=>{
       const d=D[key(a,e)]||{}; const s=getS(a,e); const inf=si(s);
+      
       const prevF=new Date((DATAS[a]||todayStr)+'T00:00:00').toLocaleDateString('pt-BR');
       const isT=DATAS[a]===todayStr;
       const pc=d.fotos?d.fotos.length:0;
-      const th=pc>0?`<img class="pthumb" src="${d.fotos[0].src}" alt="foto" onclick="openLBS('${a}','${e}',0)">`:'' ;
+      const th=pc>0?`<img class="pthumb" src="${d.fotos[0].url || d.fotos[0].src}" alt="foto" onclick="openLBS('${a}','${e}',0)">`:'' ;
       html+=`<div class="erow">
         <div class="eico" style="background:${inf.bg}"><i class="ti ${ICONS[e]||'ti-tool'}" style="color:${inf.col}" aria-hidden="true"></i></div>
         <div class="einfo">
