@@ -39,6 +39,15 @@ img{display:block}
 .topbar .sub{font-size:12px;opacity:.65;margin-top:2px}
 .topbar .dt{font-size:12px;font-family:var(--mono);background:rgba(255,255,255,.15);padding:4px 10px;border-radius:var(--radius-pill)}
 
+/* sync status */
+.sync-bar{display:flex;align-items:center;gap:6px;padding:6px 20px;font-size:11px;font-weight:600;background:rgba(255,255,255,.08);color:rgba(255,255,255,.75);flex-shrink:0;min-height:26px;transition:background .3s}
+.sync-bar.syncing{background:rgba(255,193,7,.15);color:#FFD54F}
+.sync-bar.error{background:rgba(183,28,28,.2);color:#EF9A9A}
+.sync-bar.ok{background:rgba(46,125,50,.15);color:#A5D6A7}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.sync-bar.syncing .sync-dot{animation:pulse .8s infinite alternate}
+@keyframes pulse{to{opacity:.2}}
+
 .content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(72px + var(--safe-bottom))}
 
 /* ── Bottom nav ──────────────────────────── */
@@ -119,6 +128,7 @@ img{display:block}
 .macts{display:flex;gap:10px;margin-top:16px}
 .btn{padding:12px 20px;border-radius:var(--radius);font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer;border:1.5px solid var(--border);background:var(--white);color:var(--text);flex:1;transition:all .15s}
 .btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
 .btnp{background:var(--navy);border-color:var(--navy);color:#fff}
 .btnp:active{background:var(--navy-dark)}
 
@@ -175,11 +185,27 @@ img{display:block}
 .succ-banner div{font-size:13px;color:var(--green-text);font-weight:500;line-height:1.5}
 .succ-banner small{font-size:11px;color:var(--green-text);opacity:.8}
 
+/* ── Config page ─────────────────────────── */
+.cfg-box{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.cfg-box h3{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:7px}
+.cfg-input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:14px;font-family:var(--font);color:var(--text);background:var(--surface);outline:none;transition:border .15s;margin-bottom:8px}
+.cfg-input:focus{border-color:var(--navy);background:var(--white)}
+.cfg-save-btn{width:100%;padding:13px;border-radius:var(--radius);background:var(--navy);color:#fff;border:none;font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.cfg-save-btn:active{background:var(--navy-dark)}
+.cfg-note{font-size:12px;color:var(--text3);line-height:1.6;margin-top:10px;padding:10px 12px;background:var(--surface);border-radius:var(--radius-sm);border-left:3px solid var(--navy)}
+.cfg-note code{font-family:var(--mono);font-size:11px;background:#e8eaf6;padding:1px 5px;border-radius:4px}
+.step{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
+.step-num{width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-txt{font-size:13px;color:var(--text);line-height:1.6}
+.step-txt strong{font-weight:600}
+
 .pcbadge{background:var(--blue-bg);color:var(--blue-text);font-size:10px;font-weight:600;padding:2px 7px;border-radius:var(--radius-pill)}
 .todaytag{background:var(--blue-bg);color:var(--blue-text);font-size:10px;font-weight:600;padding:2px 7px;border-radius:var(--radius-pill)}
 .empty{text-align:center;padding:48px 20px;color:var(--text3)}
 .empty i{font-size:40px;display:block;margin-bottom:12px;opacity:.35}
 .empty p{font-size:14px;line-height:1.6}
+.spin{display:inline-block;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -197,8 +223,15 @@ img{display:block}
     </div>
   </div>
 
+  <!-- Sync bar -->
+  <div class="sync-bar" id="sync-bar">
+    <div class="sync-dot"></div>
+    <span id="sync-msg">Conectando...</span>
+  </div>
+
   <!-- Content -->
   <div class="content">
+    <!-- Andamento -->
     <div class="page active" id="page-andamento">
       <div class="search-wrap">
         <div class="search-rel">
@@ -216,6 +249,7 @@ img{display:block}
       <div id="and-list"></div>
     </div>
 
+    <!-- Dashboard -->
     <div class="page" id="page-dashboard">
       <div class="kpi-grid" id="kpi-grid"></div>
       <div class="psec">
@@ -228,9 +262,13 @@ img{display:block}
       </div>
     </div>
 
+    <!-- Alertas -->
     <div class="page" id="page-alertas"><div id="alertas-list"></div></div>
+
+    <!-- Fotos -->
     <div class="page" id="page-fotos"><div id="fotos-list"></div></div>
 
+    <!-- Relatório -->
     <div class="page" id="page-relatorio">
       <div class="rpanel">
         <div class="rpanel-title"><i class="ti ti-filter" aria-hidden="true"></i>Selecionar andares</div>
@@ -256,6 +294,47 @@ img{display:block}
       </button>
       <div id="preview-area"></div>
     </div>
+
+    <!-- Config -->
+    <div class="page" id="page-config">
+      <div class="cfg-box">
+        <h3><i class="ti ti-plug-connected" aria-hidden="true"></i>Conexão com o Google Sheets</h3>
+        <div class="cfg-note">
+          <div class="step"><div class="step-num">1</div><div class="step-txt">Abra a planilha <strong>torre-olimpo</strong> no navegador e copie o <strong>ID</strong> da URL:<br><code>docs.google.com/spreadsheets/d/<strong>ID_AQUI</strong>/edit</code></div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-txt">Acesse <strong>script.google.com</strong>, crie um projeto <em>standalone</em>, cole o <code>Code.gs</code>, substitua <code>COLE_O_ID_DA_PLANILHA_AQUI</code> pelo ID e salve</div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-txt">Clique em <strong>Implantar → Novo deploy → Aplicativo da Web</strong><br>• Executar como: <strong>Eu</strong><br>• Acesso: <strong>Qualquer pessoa</strong></div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-txt">Cole o ID da planilha e a URL do deploy nos campos abaixo</div></div>
+        </div>
+        <div class="mfield" style="margin-top:14px">
+          <label>ID da planilha torre-olimpo</label>
+          <input type="text" class="cfg-input" id="cfg-sheet-id" placeholder="Ex: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" style="margin-bottom:0;font-family:var(--mono);font-size:12px">
+        </div>
+        <div class="mfield" style="margin-top:8px">
+          <label>URL do Apps Script (deploy /exec)</label>
+          <input type="text" class="cfg-input" id="cfg-url" placeholder="https://script.google.com/macros/s/.../exec" style="margin-bottom:0;font-size:12px">
+        </div>
+        <div class="mfield" style="margin-top:8px">
+          <label>Seu nome (aparece nos registros)</label>
+          <input type="text" class="cfg-input" id="cfg-user" placeholder="Ex: João Silva" style="margin-bottom:0">
+        </div>
+        <button class="cfg-save-btn" onclick="saveConfig()">
+          <i class="ti ti-device-floppy" aria-hidden="true"></i> Salvar e conectar
+        </button>
+      </div>
+      <div class="cfg-box">
+        <h3><i class="ti ti-table" aria-hidden="true"></i>Planilha conectada</h3>
+        <div id="sheet-link-area" style="font-size:13px;color:var(--text2);line-height:1.7">
+          Nenhuma planilha configurada ainda.
+        </div>
+      </div>
+      <div class="cfg-box">
+        <h3><i class="ti ti-refresh" aria-hidden="true"></i>Sincronização</h3>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6">Os dados são salvos automaticamente no Google Sheets a cada atualização. Clique abaixo para recarregar todos os dados.</p>
+        <button class="cfg-save-btn" onclick="loadFromSheets(true)" style="background:#37474F">
+          <i class="ti ti-cloud-download" aria-hidden="true"></i> Recarregar dados do Sheets
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Bottom Nav -->
@@ -276,6 +355,9 @@ img{display:block}
     </button>
     <button class="bn-btn" onclick="showPage('relatorio')" id="tab-relatorio">
       <i class="ti ti-file-text" aria-hidden="true"></i>Relatório
+    </button>
+    <button class="bn-btn" onclick="showPage('config')" id="tab-config">
+      <i class="ti ti-settings" aria-hidden="true"></i>Config
     </button>
   </div>
 
@@ -310,7 +392,7 @@ img{display:block}
       </div>
       <div class="macts">
         <button class="btn" onclick="closeModal()">Cancelar</button>
-        <button class="btn btnp" onclick="saveModal()">Salvar</button>
+        <button class="btn btnp" id="btn-salvar" onclick="saveModal()">Salvar</button>
       </div>
     </div>
   </div>
@@ -328,77 +410,364 @@ img{display:block}
 </div>
 
 <script>
-//const ANDARES=['Lobby','3° Andar','4° Andar','5° Andar','6° Andar','7° Andar','8° Andar','9° Andar','10° Andar','11° Andar','12° Andar','13° Andar','14° Andar','15° Andar','16° Andar','17° Andar','18° Andar','19° Andar','20° Andar','21° Andar','22° Andar','23° Andar','24° Andar','25° Andar','26° Andar','27° Andar','28° Andar','29° Andar'];
-// Função utilitária para converter array de arrays em array de objetos
-function parseTabela(arrayDeArrays) {
-  const [cabecalho, ...linhas] = arrayDeArrays;
-  return linhas.map(linha =>
-    Object.fromEntries(cabecalho.map((col, i) => [col, linha[i]]))
-  );
+
+// ═══════════════════════════════════════════════════════════════
+//  CONFIGURAÇÃO — cole sua URL do Apps Script aqui ou via Config
+// ═══════════════════════════════════════════════════════════════
+let GAS_URL   = localStorage.getItem('gasUrl')    || 'https://script.google.com/macros/s/AKfycbyDuBeHY9jbpiWp-f0bx1aSstyg7dD4d8qLixLZozPVzBjjENOMEfGcqyr0GrDjoKIIRA/exec';
+let SHEET_ID  = localStorage.getItem('sheetId')  || '1gUuKMISwMk2AKMn6S7jS2bZaNs6_g867noSWs1Ogw-U';
+let CFG_USER  = localStorage.getItem('gasUser')  || '';
+
+// ── Dados estáticos (fallback / default) ─────────────────────
+const DEFAULT_ANDARES = ['Lobby','3° Andar','4° Andar','5° Andar','6° Andar','7° Andar','8° Andar','9° Andar','10° Andar','11° Andar','12° Andar','13° Andar','14° Andar','15° Andar','16° Andar','17° Andar','18° Andar','19° Andar','20° Andar','21° Andar','22° Andar','23° Andar','24° Andar','25° Andar','26° Andar','27° Andar','28° Andar','29° Andar'];
+const DEFAULT_ETAPAS  = ['Abertura da parede','Fechamento shaft','Fechamento parede','Fechamento lógica','Pintura'];
+const DEFAULT_DATAS   = {'Lobby':'2026-06-02','3° Andar':'2026-06-02','4° Andar':'2026-06-03','5° Andar':'2026-06-04','6° Andar':'2026-06-05','7° Andar':'2026-06-06','8° Andar':'2026-06-07','9° Andar':'2026-06-08','10° Andar':'2026-06-09','11° Andar':'2026-06-10','12° Andar':'2026-06-11','13° Andar':'2026-06-12','14° Andar':'2026-06-13','15° Andar':'2026-06-14','16° Andar':'2026-06-15','17° Andar':'2026-06-16','18° Andar':'2026-06-17','19° Andar':'2026-06-18','20° Andar':'2026-06-19','21° Andar':'2026-06-20','22° Andar':'2026-06-21','23° Andar':'2026-06-22','24° Andar':'2026-06-23','25° Andar':'2026-06-24','26° Andar':'2026-06-25','27° Andar':'2026-06-26','28° Andar':'2026-06-27','29° Andar':'2026-06-28'};
+const ICONS = {'Abertura da parede':'ti-wall','Fechamento shaft':'ti-door','Fechamento parede':'ti-barrier-block','Fechamento lógica':'ti-plug-connected','Pintura':'ti-paint'};
+
+let ANDARES = [...DEFAULT_ANDARES];
+let ETAPAS  = [...DEFAULT_ETAPAS];
+let DATAS   = {...DEFAULT_DATAS};
+
+const today = new Date(); today.setHours(0,0,0,0);
+const todayStr = today.toISOString().slice(0,10);
+document.getElementById('today-label').textContent = today.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+
+// ── Estado local ──────────────────────────────────────────────
+let D = {}; // { "Andar::Etapa": { status, dataConclusao, obs, fotos:[] } }
+
+function key(a,e){ return a+'::'+e; }
+
+function initD(){
+  ANDARES.forEach(a => {
+    ETAPAS.forEach(e => {
+      if(!D[key(a,e)]) D[key(a,e)] = {status:autoS(a), dataConclusao:'', obs:'', fotos:[]};
+    });
+  });
 }
 
-let pavimentos;
-let ANDARES;
+function autoS(a){
+  const p = new Date((DATAS[a]||todayStr)+'T00:00:00');
+  if(p < today) return 'atrasado';
+  if(p.getTime()===today.getTime()) return 'andamento';
+  return 'pendente';
+}
 
-(async () => {
-  const response = await fetch("https://script.google.com/macros/s/AKfycbzobsm_cDnvE242xioJUoeZSQF5BAqTjxN74j-FyzkzgsYWuv8oGv9TkIy3bmJ-x-Uv0A/exec?acao=dados");
-  const dados = await response.json();
-  pavimentos = parseTabela(dados.andares);
-  ANDARES = pavimentos.map(a => a.Andar);
-  inicializarApp();
-})();
+function getS(a,e){
+  const d = D[key(a,e)];
+  if(!d) return 'pendente';
+  return d.dataConclusao ? 'concluido' : d.status;
+}
 
+function si(s){
+  const m={
+    concluido:{l:'Concluído',c:'sc',col:'#2E7D32',bg:'#E8F5E9',i:'ti-circle-check'},
+    andamento:{l:'Em andamento',c:'sa',col:'#E65100',bg:'#FFF3E0',i:'ti-refresh'},
+    atrasado:{l:'Atrasado',c:'sat',col:'#B71C1C',bg:'#FFEBEE',i:'ti-alert-circle'},
+    pendente:{l:'Pendente',c:'sp',col:'#9E9E9E',bg:'#F5F5F5',i:'ti-clock'}
+  };
+  return m[s]||m.pendente;
+}
 
-  
-const ETAPAS=['Abertura da parede','Fechamento shaft','Fechamento parede','Fechamento lógica','Pintura'];
-const DATAS={'Lobby':'2026-06-02','3° Andar':'2026-06-02','4° Andar':'2026-06-03','5° Andar':'2026-06-04','6° Andar':'2026-06-05','7° Andar':'2026-06-06','8° Andar':'2026-06-07','9° Andar':'2026-06-08','10° Andar':'2026-06-09','11° Andar':'2026-06-10','12° Andar':'2026-06-11','13° Andar':'2026-06-12','14° Andar':'2026-06-13','15° Andar':'2026-06-14','16° Andar':'2026-06-15','17° Andar':'2026-06-16','18° Andar':'2026-06-17','19° Andar':'2026-06-18','20° Andar':'2026-06-19','21° Andar':'2026-06-20','22° Andar':'2026-06-21','23° Andar':'2026-06-22','24° Andar':'2026-06-23','25° Andar':'2026-06-24','26° Andar':'2026-06-25','27° Andar':'2026-06-26','28° Andar':'2026-06-27','29° Andar':'2026-06-28'};
-const ICONS={'Abertura da parede':'ti-wall','Fechamento shaft':'ti-door','Fechamento parede':'ti-barrier-block','Fechamento lógica':'ti-plug-connected','Pintura':'ti-paint'};
-const today=new Date();today.setHours(0,0,0,0);
-const todayStr=today.toISOString().slice(0,10);
+function fpct(a){
+  let d=0;
+  ETAPAS.forEach(e=>{ if(getS(a,e)==='concluido') d++; });
+  return Math.round(d/ETAPAS.length*100);
+}
 
-document.getElementById('today-label').textContent=today.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+// ── Sync bar ──────────────────────────────────────────────────
+function setSyncBar(state, msg){
+  const bar = document.getElementById('sync-bar');
+  bar.className = 'sync-bar ' + state;
+  document.getElementById('sync-msg').textContent = msg;
+}
 
-let D={};
-function initD(){ANDARES.forEach(a=>{D[a]={};ETAPAS.forEach(e=>{D[a][e]={status:autoS(a),dataConclusao:'',obs:'',fotos:[]};});});}
-function autoS(a){const p=new Date(DATAS[a]+'T00:00:00');if(p<today)return'atrasado';if(p.getTime()===today.getTime())return'andamento';return'pendente';}
-function getS(a,e){return D[a][e].dataConclusao?'concluido':D[a][e].status;}
-function si(s){const m={concluido:{l:'Concluído',c:'sc',col:'#2E7D32',bg:'#E8F5E9',i:'ti-circle-check'},andamento:{l:'Em andamento',c:'sa',col:'#E65100',bg:'#FFF3E0',i:'ti-refresh'},atrasado:{l:'Atrasado',c:'sat',col:'#B71C1C',bg:'#FFEBEE',i:'ti-alert-circle'},pendente:{l:'Pendente',c:'sp',col:'#9E9E9E',bg:'#F5F5F5',i:'ti-clock'}};return m[s]||m.pendente;}
-function fpct(a){let d=0;ETAPAS.forEach(e=>{if(getS(a,e)==='concluido')d++;});return Math.round(d/ETAPAS.length*100);}
+// ── Google Sheets API ─────────────────────────────────────────
+// ── Camada de comunicação com o Apps Script ───────────────────
+// GET simples (sem headers customizados) → sem preflight CORS
+async function apiGet(acao){
+  const r = await fetch(GAS_URL + '?acao=' + acao);
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
 
-// ── Modal ────────────────────────────────
-let ET=null,mphotos=[];
+// POST com Content-Type: text/plain → sem preflight CORS
+async function apiPost(body){
+  const r = await fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  });
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+// ── Carrega tudo em uma única chamada GET ─────────────────────
+async function loadFromSheets(forceNotify=false){
+  if(!GAS_URL){ setSyncBar('error','Sem conexão — configure a URL em ⚙ Config'); return; }
+  setSyncBar('syncing','Carregando dados do Sheets...');
+  try {
+    const res = await apiGet('tudo');
+    if(!res.ok) throw new Error(res.erro || 'Erro desconhecido');
+
+    const { andares, etapas, servicos, fotos } = res.data;
+
+    // Aplica configuração de andares e etapas
+    if(andares && andares.length){
+      ANDARES = andares.map(a => a.Andar);
+      DATAS   = {};
+      andares.forEach(a => {
+        // DataPrevista pode vir como "2026-06-02T00:00:00.000Z" ou "2026-06-02"
+        DATAS[a.Andar] = (a.DataPrevista || todayStr).split('T')[0];
+      });
+    }
+    if(etapas && etapas.length){
+      ETAPAS = etapas.map(e => e.Etapa);
+    }
+
+    initD(); // garante estrutura para todos os pares
+
+    // Aplica status e observações
+    (servicos || []).forEach(s => {
+      const k = key(s.Andar, s.Etapa);
+      if(D[k]){
+        if(s.Status)        D[k].status        = s.Status;
+        if(s.DataConclusao) D[k].dataConclusao = s.DataConclusao;
+        if(s.Obs)           D[k].obs           = s.Obs;
+      }
+    });
+
+    // Agrupa fotos por andar+etapa
+    // Cada item usa `url` (link do Drive) — não base64
+    (fotos || []).forEach(f => {
+      const k = key(f.Andar, f.Etapa);
+      if(D[k]){
+        if(!D[k].fotos) D[k].fotos = [];
+        D[k].fotos.push({ name: f.NomeFoto, url: f.Url, fileId: f.FileId, dataUpload: f.EnviadoEm, usuario: f.Usuario });
+      }
+    });
+
+    setSyncBar('ok', 'Sincronizado · ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+    renderAll();
+    if(forceNotify) showToast('Dados recarregados do Sheets!');
+  } catch(ex){
+    setSyncBar('error','Erro de conexão — verifique a URL');
+    console.error(ex);
+  }
+}
+
+// ── Salva status/obs de um serviço ────────────────────────────
+async function pushItem(a, e){
+  if(!GAS_URL) return;
+  const d = D[key(a,e)];
+  setSyncBar('syncing','Salvando...');
+  try {
+    const res = await apiPost({
+      acao:          'salvarServico',
+      Andar:         a,
+      Etapa:         e,
+      Status:        d.status,
+      DataConclusao: d.dataConclusao,
+      Obs:           d.obs,
+      Usuario:       CFG_USER
+    });
+    if(res.ok) setSyncBar('ok','Salvo · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+    else setSyncBar('error','Erro: ' + res.erro);
+  } catch(ex){
+    setSyncBar('error','Erro de rede');
+  }
+}
+
+// ── Envia fotos novas ─────────────────────────────────────────
+async function pushPhotos(a, e, newPhotos){
+  if(!GAS_URL || !newPhotos.length) return;
+  setSyncBar('syncing','Enviando ' + newPhotos.length + ' foto(s) para o Drive...');
+  try {
+    // Envia o base64 completo; o Apps Script salva no Drive e grava só a URL na planilha
+    const res = await apiPost({
+      acao:    'salvarFotos',
+      Andar:   a,
+      Etapa:   e,
+      fotos:   newPhotos.map(f => ({ NomeFoto: f.name, Base64: f.src })),
+      Usuario: CFG_USER
+    });
+    if(res.ok){
+      const msg = 'Fotos salvas no Drive · ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      setSyncBar('ok', msg);
+      if(res.data && res.data.rejeitadas && res.data.rejeitadas.length)
+        showToast('Atenção: ' + res.data.rejeitadas.length + ' foto(s) não enviada(s)', 'error');
+    } else {
+      setSyncBar('error','Erro: ' + res.erro);
+    }
+  } catch(ex){
+    setSyncBar('error','Erro de rede ao enviar fotos');
+    console.error(ex);
+  }
+}
+
+// ── Exclui foto remota ────────────────────────────────────────
+async function deletePhotoRemote(a, e, idx){
+  if(!GAS_URL) return;
+  await apiPost({ acao: 'excluirFoto', Andar: a, Etapa: e, indice: idx });
+}
+
+// ── Config page ───────────────────────────────────────────────
+function saveConfig(){
+  const url     = document.getElementById('cfg-url').value.trim();
+  const sheetId = document.getElementById('cfg-sheet-id').value.trim();
+  const user    = document.getElementById('cfg-user').value.trim();
+  if(!url)     { showToast('Cole a URL do Apps Script!','error'); return; }
+  if(!sheetId) { showToast('Cole o ID da planilha!','error'); return; }
+  GAS_URL  = url;
+  SHEET_ID = sheetId;
+  CFG_USER = user;
+  localStorage.setItem('gasUrl',   url);
+  localStorage.setItem('sheetId',  sheetId);
+  localStorage.setItem('gasUser',  user);
+  updateSheetLinkArea();
+  showToast('Configuração salva! Conectando...');
+  loadFromSheets();
+}
+
+function updateSheetLinkArea(){
+  const el = document.getElementById('sheet-link-area');
+  if(!el) return;
+  if(!SHEET_ID){
+    el.innerHTML = 'Nenhuma planilha configurada ainda.';
+    return;
+  }
+  const url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/edit';
+  el.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px">'
+    + '<div style="display:flex;align-items:center;gap:8px">'
+    + '<i class="ti ti-table" style="color:var(--navy);font-size:18px" aria-hidden="true"></i>'
+    + '<strong style="color:var(--text)">torre-olimpo</strong>'
+    + '</div>'
+    + '<div style="font-family:var(--mono);font-size:11px;color:var(--text3);word-break:break-all;background:var(--surface);padding:7px 10px;border-radius:8px">' + SHEET_ID + '</div>'
+    + '<a href="' + url + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;color:var(--navy);font-weight:600;font-size:13px;text-decoration:none">'
+    + '<i class="ti ti-external-link" style="font-size:14px" aria-hidden="true"></i>Abrir no Google Sheets</a>'
+    + '</div>';
+}
+
+// ── Modal ─────────────────────────────────────────────────────
+let ET=null, mphotos=[], mNewPhotos=[];
+
 function openModal(a,e){
-  ET={a,e};const d=D[a][e];
+  ET={a,e};
+  const d=D[key(a,e)]||{};
   document.getElementById('modal-title-txt').textContent=a+' — '+e;
   document.getElementById('mstatus').value=d.status||'pendente';
   document.getElementById('mdate').value=d.dataConclusao||'';
   document.getElementById('mobs').value=d.obs||'';
-  mphotos=[...(d.fotos||[])];renderMP();
+  mphotos=[...(d.fotos||[])];
+  mNewPhotos=[];
+  renderMP();
   document.getElementById('modal').classList.add('open');
 }
-function closeModal(ev){if(!ev||ev.target===document.getElementById('modal'))document.getElementById('modal').classList.remove('open');}
-function saveModal(){
-  const{a,e}=ET;
-  D[a][e]={status:document.getElementById('mstatus').value,dataConclusao:document.getElementById('mdate').value,obs:document.getElementById('mobs').value,fotos:[...mphotos]};
-  document.getElementById('modal').classList.remove('open');renderAll();
-}
-function handleUpload(ev){
-  [...ev.target.files].forEach(f=>{const r=new FileReader();r.onload=x=>{mphotos.push({src:x.result,name:f.name});renderMP();};r.readAsDataURL(f);});
-  ev.target.value='';
-}
-function renderMP(){
-  document.getElementById('ph-prev').innerHTML=mphotos.map((p,i)=>
-    `<div class="pitem"><img src="${p.src}" alt="${p.name}" onclick="openLBM(${i})"><button class="pdel" onclick="mphotos.splice(${i},1);renderMP()"><i class="ti ti-x" aria-hidden="true"></i></button></div>`
-  ).join('');
-}
-function toggleCheck(a,e){
-  if(getS(a,e)==='concluido'){D[a][e].dataConclusao='';D[a][e].status=autoS(a);}
-  else{D[a][e].dataConclusao=todayStr;D[a][e].status='concluido';}
-  renderAll();
-}
-function toggleFloor(id){document.getElementById('fb-'+id).classList.toggle('open');document.getElementById('fc-'+id).classList.toggle('open');}
 
-// ── Andamento ────────────────────────────
+function closeModal(ev){
+  if(!ev||ev.target===document.getElementById('modal'))
+    document.getElementById('modal').classList.remove('open');
+}
+
+async function saveModal(){
+  const {a,e}=ET;
+  const btn=document.getElementById('btn-salvar');
+  btn.disabled=true; btn.innerHTML='<i class="ti ti-loader spin"></i> Salvando...';
+
+  const prev = D[key(a,e)]||{};
+  D[key(a,e)]={
+    status:        document.getElementById('mstatus').value,
+    dataConclusao: document.getElementById('mdate').value,
+    obs:           document.getElementById('mobs').value,
+    fotos:         mphotos.map(f => ({
+      name:      f.name,
+      url:       f.url   || f.src,  // fotos salvas têm url; novas ainda têm src (base64 local)
+      src:       f.src   || '',     // mantido só para exibição local antes do reload
+      fileId:    f.fileId || '',
+      dataUpload: f.dataUpload || '',
+      usuario:   f.usuario || CFG_USER
+    }))
+  };
+
+  document.getElementById('modal').classList.remove('open');
+  renderAll();
+
+  // Push em paralelo
+  await pushItem(a,e);
+  if(mNewPhotos.length) await pushPhotos(a,e,mNewPhotos);
+
+  btn.disabled=false; btn.innerHTML='Salvar';
+}
+
+// ── Upload de fotos ───────────────────────────────────────────
+// Lê cada arquivo como base64 e exibe preview local.
+// O arquivo real (qualidade original) é enviado ao Apps Script,
+// que o salva no Google Drive e grava apenas a URL na planilha.
+function lerArquivoComoBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Falha ao ler: ' + file.name));
+    reader.onload  = ev => resolve({ src: ev.target.result, name: file.name });
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleUpload(ev){
+  const files = [...ev.target.files];
+  ev.target.value = '';
+  if(!files.length) return;
+
+  showToast('Lendo ' + files.length + ' foto(s)...');
+
+  const resultados = await Promise.allSettled(files.map(f => lerArquivoComoBase64(f)));
+
+  resultados.forEach((r, i) => {
+    if(r.status === 'fulfilled'){
+      mphotos.push(r.value);
+      mNewPhotos.push(r.value);
+    } else {
+      showToast('Erro: ' + files[i].name, 'error');
+    }
+  });
+
+  renderMP();
+}
+
+function renderMP(){
+  document.getElementById('ph-prev').innerHTML=mphotos.map((p,i)=>{
+    const exibir = p.url || p.src; // url = Drive; src = base64 local ainda não enviado
+    return `<div class="pitem"><img src="${exibir}" alt="${p.name}" onclick="openLBM(${i})">
+     <button class="pdel" onclick="delMP(${i})"><i class="ti ti-x" aria-hidden="true"></i></button></div>`;
+  }).join('');
+}
+
+async function delMP(i){
+  const {a,e}=ET;
+  // Se a foto já estava salva no Sheets (não é nova), remove lá também
+  const isNew = mphotos.length - mNewPhotos.length <= i;
+  if(!isNew){
+    const remoteIdx = i; // índice no Sheets
+    deletePhotoRemote(a,e,remoteIdx);
+  } else {
+    mNewPhotos.splice(i-(mphotos.length-mNewPhotos.length),1);
+  }
+  mphotos.splice(i,1);
+  renderMP();
+}
+
+function toggleCheck(a,e){
+  const d=D[key(a,e)];
+  if(getS(a,e)==='concluido'){ d.dataConclusao=''; d.status=autoS(a); }
+  else{ d.dataConclusao=todayStr; d.status='concluido'; }
+  renderAll();
+  pushItem(a,e);
+}
+
+function toggleFloor(id){
+  document.getElementById('fb-'+id).classList.toggle('open');
+  document.getElementById('fc-'+id).classList.toggle('open');
+}
+
+// ── Andamento ─────────────────────────────────────────────────
 function renderAndamento(){
   const q=document.getElementById('srch').value.toLowerCase();
   const fs=document.getElementById('fstatus').value;
@@ -406,8 +775,8 @@ function renderAndamento(){
   ANDARES.forEach((a,ai)=>{
     const mA=a.toLowerCase().includes(q);
     const ets=ETAPAS.filter(e=>(e.toLowerCase().includes(q)||mA)&&(!fs||getS(a,e)===fs));
-    if(!ets.length&&q)return;
-    const p=fpct(a);const bc=p===100?'#2E7D32':p>0?'#1A237E':'#9E9E9E';
+    if(!ets.length&&q) return;
+    const p=fpct(a); const bc=p===100?'#2E7D32':p>0?'#1A237E':'#9E9E9E';
     const id='f'+ai;
     html+=`<div class="floor-card">
       <div class="floor-hdr" onclick="toggleFloor('${id}')">
@@ -418,11 +787,11 @@ function renderAndamento(){
       </div>
       <div class="floor-body" id="fb-${id}">`;
     ets.forEach(e=>{
-      const d=D[a][e];const s=getS(a,e);const inf=si(s);
-      const prevF=new Date(DATAS[a]+'T00:00:00').toLocaleDateString('pt-BR');
+      const d=D[key(a,e)]||{}; const s=getS(a,e); const inf=si(s);
+      const prevF=new Date((DATAS[a]||todayStr)+'T00:00:00').toLocaleDateString('pt-BR');
       const isT=DATAS[a]===todayStr;
       const pc=d.fotos?d.fotos.length:0;
-      const th=pc>0?`<img class="pthumb" src="${d.fotos[0].src}" alt="foto" onclick="openLBS('${a}','${e}',0)">`:'';
+      const th=pc>0?`<img class="pthumb" src="${d.fotos[0].src}" alt="foto" onclick="openLBS('${a}','${e}',0)">`:'' ;
       html+=`<div class="erow">
         <div class="eico" style="background:${inf.bg}"><i class="ti ${ICONS[e]||'ti-tool'}" style="color:${inf.col}" aria-hidden="true"></i></div>
         <div class="einfo">
@@ -441,14 +810,14 @@ function renderAndamento(){
     });
     html+=`</div></div>`;
   });
-  if(!html)html=`<div class="empty"><i class="ti ti-search" aria-hidden="true"></i><p>Nenhum resultado encontrado</p></div>`;
+  if(!html) html=`<div class="empty"><i class="ti ti-search" aria-hidden="true"></i><p>Nenhum resultado encontrado</p></div>`;
   document.getElementById('and-list').innerHTML=html;
 }
 
-// ── Dashboard ────────────────────────────
+// ── Dashboard ─────────────────────────────────────────────────
 function renderDashboard(){
   let c={concluido:0,andamento:0,atrasado:0,pendente:0};
-  ANDARES.forEach(a=>ETAPAS.forEach(e=>{c[getS(a,e)]++;}));
+  ANDARES.forEach(a=>ETAPAS.forEach(e=>{ c[getS(a,e)]++; }));
   const tot=ANDARES.length*ETAPAS.length;
   document.getElementById('kpi-grid').innerHTML=[
     {k:'concluido',l:'Concluídos',cl:'kvg',i:'ti-circle-check'},
@@ -456,16 +825,25 @@ function renderDashboard(){
     {k:'atrasado',l:'Atrasados',cl:'kvr',i:'ti-alert-circle'},
     {k:'pendente',l:'Pendentes',cl:'kvgr',i:'ti-clock'}
   ].map(x=>`<div class="kcard"><div class="klbl"><i class="ti ${x.i}" style="font-size:13px" aria-hidden="true"></i>${x.l}</div><div class="kval ${x.cl}">${c[x.k]}</div><div class="ksub">${Math.round(c[x.k]/tot*100)}% do total</div></div>`).join('');
-  document.getElementById('prog-and').innerHTML=ANDARES.map(a=>{const p=fpct(a);const cl=p===100?'#2E7D32':p>0?'#1A237E':'#C5CAE9';return`<div class="prow"><div class="plbl">${a}</div><div class="pbw"><div class="pbar" style="width:${p}%;background:${cl}"></div></div><div class="pnum">${p}%</div></div>`;}).join('');
-  document.getElementById('prog-et').innerHTML=ETAPAS.map(e=>{let d=0;ANDARES.forEach(a=>{if(getS(a,e)==='concluido')d++;});const p=Math.round(d/ANDARES.length*100);const cl=p===100?'#2E7D32':p>0?'#1A237E':'#C5CAE9';return`<div class="prow"><div class="plbl">${e}</div><div class="pbw"><div class="pbar" style="width:${p}%;background:${cl}"></div></div><div class="pnum">${p}%</div></div>`;}).join('');
+  document.getElementById('prog-and').innerHTML=ANDARES.map(a=>{
+    const p=fpct(a);const cl=p===100?'#2E7D32':p>0?'#1A237E':'#C5CAE9';
+    return`<div class="prow"><div class="plbl">${a}</div><div class="pbw"><div class="pbar" style="width:${p}%;background:${cl}"></div></div><div class="pnum">${p}%</div></div>`;
+  }).join('');
+  document.getElementById('prog-et').innerHTML=ETAPAS.map(e=>{
+    let d=0; ANDARES.forEach(a=>{ if(getS(a,e)==='concluido') d++; });
+    const p=Math.round(d/ANDARES.length*100);const cl=p===100?'#2E7D32':p>0?'#1A237E':'#C5CAE9';
+    return`<div class="prow"><div class="plbl">${e}</div><div class="pbw"><div class="pbar" style="width:${p}%;background:${cl}"></div></div><div class="pnum">${p}%</div></div>`;
+  }).join('');
 }
 
-// ── Alertas ──────────────────────────────
+// ── Alertas ───────────────────────────────────────────────────
 function renderAlertas(){
   let atr=[],em=[];
   ANDARES.forEach(a=>ETAPAS.forEach(e=>{
-    const s=getS(a,e);const pr=new Date(DATAS[a]+'T00:00:00');const di=Math.round((today-pr)/86400000);
-    if(s==='atrasado')atr.push({a,e,di});if(s==='andamento')em.push({a,e});
+    const s=getS(a,e);const pr=new Date((DATAS[a]||todayStr)+'T00:00:00');
+    const di=Math.round((today-pr)/86400000);
+    if(s==='atrasado') atr.push({a,e,di});
+    if(s==='andamento') em.push({a,e});
   }));
   document.getElementById('abadge').textContent=atr.length;
   document.getElementById('abadge').style.display=atr.length?'inline':'none';
@@ -480,40 +858,40 @@ function renderAlertas(){
     em.forEach(it=>{html+=`<div class="alert-row"><div class="alert-ico" style="background:#FFF3E0"><i class="ti ti-tool" style="color:#E65100" aria-hidden="true"></i></div><div class="einfo"><div class="ename">${it.a} — ${it.e}</div><div class="edate">Previsto para hoje</div></div><button class="btn btnp" style="font-size:12px;padding:8px 12px;flex:0" onclick="openModal('${it.a}','${it.e}')">Atualizar</button></div>`;});
     html+=`</div>`;
   }
-  if(!atr.length&&!em.length)html=`<div class="empty"><i class="ti ti-circle-check" style="color:#2E7D32;opacity:1" aria-hidden="true"></i><p style="color:#2E7D32;font-weight:600">Tudo em dia!</p></div>`;
+  if(!atr.length&&!em.length) html=`<div class="empty"><i class="ti ti-circle-check" style="color:#2E7D32;opacity:1" aria-hidden="true"></i><p style="color:#2E7D32;font-weight:600">Tudo em dia!</p></div>`;
   document.getElementById('alertas-list').innerHTML=html;
 }
 
-// ── Fotos ────────────────────────────────
+// ── Fotos ─────────────────────────────────────────────────────
 function renderFotos(){
   let tot=0;let html='';
   ANDARES.forEach(a=>{
     let bl='';
     ETAPAS.forEach(e=>{
-      const d=D[a][e];
+      const d=D[key(a,e)]||{};
       if(d.fotos&&d.fotos.length){
         tot+=d.fotos.length;
         bl+=`<div class="etapa-fotos">
           <div class="etapa-fotos-label"><i class="ti ${ICONS[e]||'ti-tool'}" aria-hidden="true"></i>${e}<span class="pcbadge">${d.fotos.length}</span>
             <button style="margin-left:auto;padding:3px 10px;border-radius:999px;border:1.5px solid var(--border);background:var(--white);font-size:11px;font-weight:600;cursor:pointer;color:var(--navy)" onclick="openModal('${a}','${e}')">+ Foto</button>
           </div>
-          <div class="pgrid">${d.fotos.map((f,i)=>`<div class="pitem" onclick="openLBS('${a}','${e}',${i})"><img src="${f.src}" alt="${f.name}"></div>`).join('')}</div>
+          <div class="pgrid">${d.fotos.map((f,i)=>`<div class="pitem" onclick="openLBS('${a}','${e}',${i})"><img src="${f.url||f.src}" alt="${f.name}"></div>`).join('')}</div>
         </div>`;
       }
     });
-    if(bl)html+=`<div class="fotos-section"><div class="fotos-hdr"><i class="ti ti-building" style="color:var(--navy);font-size:18px" aria-hidden="true"></i><span>${a}</span></div><div class="fotos-body">${bl}</div></div>`;
+    if(bl) html+=`<div class="fotos-section"><div class="fotos-hdr"><i class="ti ti-building" style="color:var(--navy);font-size:18px" aria-hidden="true"></i><span>${a}</span></div><div class="fotos-body">${bl}</div></div>`;
   });
   document.getElementById('ptbadge').textContent=tot;
   document.getElementById('ptbadge').style.display=tot?'inline':'none';
-  if(!html)html=`<div class="empty"><i class="ti ti-photo-off" aria-hidden="true"></i><p>Nenhuma foto adicionada ainda.<br>Use o botão <i class="ti ti-camera" style="font-size:13px;vertical-align:-2px"></i> em qualquer serviço.</p></div>`;
+  if(!html) html=`<div class="empty"><i class="ti ti-photo-off" aria-hidden="true"></i><p>Nenhuma foto adicionada ainda.<br>Use o botão <i class="ti ti-camera" style="font-size:13px;vertical-align:-2px"></i> em qualquer serviço.</p></div>`;
   document.getElementById('fotos-list').innerHTML=html;
 }
 
-// ── Relatório ────────────────────────────
+// ── Relatório ─────────────────────────────────────────────────
 function renderRelChecklist(){
   document.getElementById('rel-checklist').innerHTML=ANDARES.map((a,i)=>{
     const p=fpct(a);const sc=p===100?'sc':p>0?'sa':'sp';const sl=p===100?'Concluído':p>0?'Em andamento':'Pendente';
-    const pcs=ETAPAS.reduce((n,e)=>n+(D[a][e].fotos?D[a][e].fotos.length:0),0);
+    const pcs=ETAPAS.reduce((n,e)=>n+(D[key(a,e)]&&D[key(a,e)].fotos?D[key(a,e)].fotos.length:0),0);
     return`<div class="rchkrow">
       <input type="checkbox" id="rc${i}" value="${a}" checked>
       <label for="rc${i}">
@@ -524,8 +902,9 @@ function renderRelChecklist(){
     </div>`;
   }).join('');
 }
-function selAll(v){ANDARES.forEach((_,i)=>{const cb=document.getElementById('rc'+i);if(cb)cb.checked=v;});}
-function selConcluidos(){ANDARES.forEach((a,i)=>{const cb=document.getElementById('rc'+i);if(cb)cb.checked=fpct(a)===100;});}
+
+function selAll(v){ ANDARES.forEach((_,i)=>{ const cb=document.getElementById('rc'+i);if(cb)cb.checked=v; }); }
+function selConcluidos(){ ANDARES.forEach((a,i)=>{ const cb=document.getElementById('rc'+i);if(cb)cb.checked=fpct(a)===100; }); }
 
 function gerarRelatorio(){
   const titulo=document.getElementById('rel-titulo').value||'Relatório de Serviços — Torre Olimpo';
@@ -535,8 +914,8 @@ function gerarRelatorio(){
   const incPen=document.getElementById('rel-pen').checked;
   const dataNow=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
   const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  const andSel=ANDARES.filter((_,i)=>{const cb=document.getElementById('rc'+i);return cb&&cb.checked;});
-  if(!andSel.length){alert('Selecione pelo menos um andar.');return;}
+  const andSel=ANDARES.filter((_,i)=>{ const cb=document.getElementById('rc'+i);return cb&&cb.checked; });
+  if(!andSel.length){showToast('Selecione pelo menos um andar.','error');return;}
   let tot=0,conc=0,atr=0;
   andSel.forEach(a=>ETAPAS.forEach(e=>{tot++;const s=getS(a,e);if(s==='concluido')conc++;if(s==='atrasado')atr++;}));
   const sBg={concluido:'#E8F5E9',andamento:'#FFF3E0',atrasado:'#FFEBEE',pendente:'#F5F5F5'};
@@ -546,9 +925,9 @@ function gerarRelatorio(){
   andSel.forEach(a=>{
     const p=fpct(a);
     const rows=ETAPAS.map(e=>{
-      const d=D[a][e];const s=getS(a,e);
-      if(!incPen&&s==='pendente')return'';
-      const prevF=new Date(DATAS[a]+'T00:00:00').toLocaleDateString('pt-BR');
+      const d=D[key(a,e)]||{};const s=getS(a,e);
+      if(!incPen&&s==='pendente') return '';
+      const prevF=new Date((DATAS[a]||todayStr)+'T00:00:00').toLocaleDateString('pt-BR');
       const conclF=d.dataConclusao?new Date(d.dataConclusao+'T12:00:00').toLocaleDateString('pt-BR'):'—';
       const obsH=incObs&&d.obs?`<div style="background:#F8F9FA;border-left:3px solid #CFD8DC;padding:7px 11px;margin-top:7px;border-radius:0 4px 4px 0;font-size:12px;color:#455A64"><b>Obs:</b> ${d.obs}</div>`:'';
       const ftsH=incFotos&&d.fotos&&d.fotos.length?`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:9px">${d.fotos.map(f=>`<img src="${f.src}" style="width:110px;height:82px;object-fit:cover;border-radius:6px;border:1px solid #E0E0E0">`).join('')}</div>`:'';
@@ -580,9 +959,8 @@ function gerarRelatorio(){
       </table>
     </div>`;
   });
-
-  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${titulo}</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#F5F5F5;color:#212121;padding:20px}@media print{body{background:#fff;padding:0}.noprint{display:none}page{size:A4;margin:15mm}}</style>
+  const htmlRel=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${titulo}</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#F5F5F5;color:#212121;padding:20px}@media print{body{background:#fff;padding:0}.noprint{display:none}}</style>
 </head><body>
 <div style="max-width:900px;margin:0 auto">
   <div style="background:#1A237E;color:#fff;padding:24px 28px;border-radius:10px;margin-bottom:22px">
@@ -605,47 +983,64 @@ function gerarRelatorio(){
   <button onclick="window.print()" style="background:#1A237E;color:#fff;border:none;padding:12px 22px;border-radius:10px;font-size:14px;cursor:pointer;font-weight:700;font-family:Arial">Imprimir / Salvar PDF</button>
 </div>
 </body></html>`;
-
-  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const blob=new Blob([htmlRel],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a2=document.createElement('a');
   a2.href=url;a2.download='relatorio_torre_olimpo_'+todayStr+'.html';
   document.body.appendChild(a2);a2.click();document.body.removeChild(a2);
   setTimeout(()=>URL.revokeObjectURL(url),5000);
-  document.getElementById('preview-area').innerHTML=`<div class="succ-banner"><i class="ti ti-circle-check" aria-hidden="true"></i><div>Relatório gerado com sucesso!<br><small>${andSel.length} andares · ${tot} serviços · Abra o arquivo no navegador e use "Imprimir" para salvar como PDF.</small></div></div>`;
+  document.getElementById('preview-area').innerHTML=`<div class="succ-banner"><i class="ti ti-circle-check" aria-hidden="true"></i><div>Relatório gerado com sucesso!<br><small>${andSel.length} andares · ${tot} serviços · Abra o arquivo e use "Imprimir" para salvar como PDF.</small></div></div>`;
 }
 
-// ── Lightbox ─────────────────────────────
+// ── Lightbox ──────────────────────────────────────────────────
 let lbPh=[],lbIdx=0;
-function openLBS(a,e,i){lbPh=D[a][e].fotos||[];lbIdx=i;showLB(a+' — '+e);}
-function openLBM(i){lbPh=mphotos;lbIdx=i;showLB('Prévia');}
-function showLB(cap){
-  if(!lbPh.length)return;
-  document.getElementById('lb-img').src=lbPh[lbIdx].src;
+function openLBS(a,e,i){lbPh=(D[key(a,e)]&&D[key(a,e)].fotos)||[];lbIdx=i;showLB();}
+function openLBM(i){lbPh=mphotos;lbIdx=i;showLB();}
+function showLB(){
+  if(!lbPh.length) return;
+  document.getElementById('lb-img').src=lbPh[lbIdx].url || lbPh[lbIdx].src;
   document.getElementById('lb-cap').textContent=(lbIdx+1)+'/'+lbPh.length;
   document.getElementById('lb-prev').style.display=lbPh.length>1?'flex':'none';
   document.getElementById('lb-next').style.display=lbPh.length>1?'flex':'none';
   document.getElementById('lightbox').classList.add('open');
 }
 function closeLB(){document.getElementById('lightbox').classList.remove('open');}
-function lbNav(d){lbIdx=(lbIdx+d+lbPh.length)%lbPh.length;document.getElementById('lb-img').src=lbPh[lbIdx].src;document.getElementById('lb-cap').textContent=(lbIdx+1)+'/'+lbPh.length;}
+function lbNav(d){lbIdx=(lbIdx+d+lbPh.length)%lbPh.length;document.getElementById('lb-img').src=lbPh[lbIdx].url||lbPh[lbIdx].src;document.getElementById('lb-cap').textContent=(lbIdx+1)+'/'+lbPh.length;}
 
-// ── Navigation ───────────────────────────
+// ── Toast ─────────────────────────────────────────────────────
+function showToast(msg,type='ok'){
+  let t=document.getElementById('_toast');
+  if(!t){t=document.createElement('div');t.id='_toast';t.style.cssText='position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:#1A237E;color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;font-weight:600;z-index:300;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.25);transition:opacity .3s';document.querySelector('.app').appendChild(t);}
+  t.style.background=type==='error'?'#B71C1C':'#1A237E';
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(t._to);t._to=setTimeout(()=>{t.style.opacity='0';},2500);
+}
+
+// ── Navigation ────────────────────────────────────────────────
 function showPage(n){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.bn-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+n).classList.add('active');
   document.getElementById('tab-'+n).classList.add('active');
-  if(n==='relatorio')renderRelChecklist();
+  if(n==='relatorio') renderRelChecklist();
+  if(n==='config'){
+    document.getElementById('cfg-url').value=GAS_URL;
+    document.getElementById('cfg-sheet-id').value=SHEET_ID;
+    document.getElementById('cfg-user').value=CFG_USER;
+    updateSheetLinkArea();
+  }
 }
+
 function renderAll(){renderAndamento();renderDashboard();renderAlertas();renderFotos();}
 
-function inicializarApp() {
-  initD();renderAll();
-  console.log(ANDARES); //disponível
+// ── Init ──────────────────────────────────────────────────────
+initD();
+renderAll();
+if(GAS_URL && SHEET_ID){
+  loadFromSheets();
+} else {
+  setSyncBar('error','Configure a conexão em ⚙ Config');
 }
-  
-//initD();renderAll();
 </script>
 </body>
 </html>
