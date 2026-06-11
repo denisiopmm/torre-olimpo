@@ -409,7 +409,7 @@ img{display:block}
 //  CONFIGURAÇÃO FIXA — definida na hospedagem e no Drive
 // ═══════════════════════════════════════════════════════════════
 const GAS_URL  = 'https://script.google.com/macros/s/AKfycbxUV4jCmK9BX3plKoL-nqh00LYJxjEy7OGKgluYB5QCffomOswvui_IIMzVjhrBNnWnVQ/exec';
-const SHEET_ID = '1gUuKMISwMk2AKMn6S7jS2bZaNs6_g867noSWs1Ogw-U';
+
 
 // ── Login / Sessão ────────────────────────────────────────────
 // Sessão salva no localStorage (permanente no dispositivo)
@@ -852,7 +852,7 @@ function renderAndamento(){
         <div class="eico" style="background:${inf.bg}"><i class="ti ${ICONS[e]||'ti-tool'}" style="color:${inf.col}" aria-hidden="true"></i></div>
         <div class="einfo">
           <div class="ename">${e}${pc>0?` <span class="pcbadge"><i class="ti ti-photo" style="font-size:9px" aria-hidden="true"></i> ${pc}</span>`:''}</div>
-          <div class="edate">Prev: ${prevF}${isT?' <span class="todaytag">hoje</span>':''}${d.dataConclusao?' · Concl: '+new Date(d.dataConclusao+'T12:00:00').toLocaleDateString('pt-BR'):''}</div>
+          <div class="edate">Prev: ${prevF}${isT?' <span class="todaytag">hoje</span>':''}${d.dataConclusao?' · Concl: '+new Date(parseDateStr(d.dataConclusao)+'T12:00:00').toLocaleDateString('pt-BR'):''}</div>
         </div>
         <div class="eacts">${th}<span class="sbadge ${inf.c}">${inf.l}</span>
           <button class="btr ${s==='concluido'?'done':''}" onclick="toggleCheck('${a}','${e}')" aria-label="Concluir">
@@ -962,6 +962,18 @@ function renderRelChecklist(){
 function selAll(v){ ANDARES.forEach((_,i)=>{ const cb=document.getElementById('rc'+i);if(cb)cb.checked=v; }); }
 function selConcluidos(){ ANDARES.forEach((a,i)=>{ const cb=document.getElementById('rc'+i);if(cb)cb.checked=fpct(a)===100; }); }
 
+// Converte qualquer URL do Drive para o formato de exibição direta
+// Suporta: /file/d/ID/view, /open?id=ID, /uc?id=ID, e base64 (retorna sem modificar)
+function driveViewUrl(url){
+  if(!url) return '';
+  if(url.startsWith('data:')) return url; // base64 local, já ok
+  // Extrai o fileId de qualquer formato de link do Drive
+  let m = url.match(/\/file\/d\/([^\/\?&]+)/);
+  if(!m) m = url.match(/[?&]id=([^&]+)/);
+  if(m && m[1]) return 'https://drive.google.com/uc?export=view&id=' + m[1];
+  return url; // URL desconhecida, retorna como está
+}
+
 function gerarRelatorio(){
   const titulo=document.getElementById('rel-titulo').value||'Relatório de Serviços — Torre Olimpo';
   const resp=document.getElementById('rel-resp').value;
@@ -984,9 +996,9 @@ function gerarRelatorio(){
       const d=D[key(a,e)]||{};const s=getS(a,e);
       if(!incPen&&s==='pendente') return '';
       const prevF=new Date((DATAS[a]||todayStr)+'T00:00:00').toLocaleDateString('pt-BR');
-      const conclF=d.dataConclusao?new Date(d.dataConclusao+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+      const conclF=d.dataConclusao?new Date(parseDateStr(d.dataConclusao)+'T12:00:00').toLocaleDateString('pt-BR'):'—';
       const obsH=incObs&&d.obs?`<div style="background:#F8F9FA;border-left:3px solid #CFD8DC;padding:7px 11px;margin-top:7px;border-radius:0 4px 4px 0;font-size:12px;color:#455A64"><b>Obs:</b> ${d.obs}</div>`:'';
-      const ftsH=incFotos&&d.fotos&&d.fotos.length?`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:9px">${d.fotos.map(f=>`<img src="${f.src}" style="width:110px;height:82px;object-fit:cover;border-radius:6px;border:1px solid #E0E0E0">`).join('')}</div>`:'';
+      const ftsH=incFotos&&d.fotos&&d.fotos.length?`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:9px">${d.fotos.map(f=>{const src=driveViewUrl(f.url||f.src);return '<img src="'+src+'" style="width:110px;height:82px;object-fit:cover;border-radius:6px;border:1px solid #E0E0E0" onerror="this.style.display=\'none\'">';}).join('')}</div>`:'';
       return`<tr style="border-bottom:1px solid #F0F0F0;vertical-align:top">
         <td style="padding:10px 12px;font-size:13px;min-width:150px">${e}</td>
         <td style="padding:10px 12px"><span style="background:${sBg[s]};color:${sCol[s]};font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px">${sLbl[s]}</span></td>
@@ -1016,7 +1028,7 @@ function gerarRelatorio(){
     </div>`;
   });
   const htmlRel=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${titulo}</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#F5F5F5;color:#212121;padding:20px}@media print{body{background:#fff;padding:0}.noprint{display:none}}</style>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#F5F5F5;color:#212121;padding:20px}@media print{body{background:#fff;padding:0}.noprint{display:none}img{max-width:100%;page-break-inside:avoid}tr{page-break-inside:avoid}}</style>
 </head><body>
 <div style="max-width:900px;margin:0 auto">
   <div style="background:#1A237E;color:#fff;padding:24px 28px;border-radius:10px;margin-bottom:22px">
@@ -1039,13 +1051,12 @@ function gerarRelatorio(){
   <button onclick="window.print()" style="background:#1A237E;color:#fff;border:none;padding:12px 22px;border-radius:10px;font-size:14px;cursor:pointer;font-weight:700;font-family:Arial">Imprimir / Salvar PDF</button>
 </div>
 </body></html>`;
-  const blob=new Blob([htmlRel],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a2=document.createElement('a');
-  a2.href=url;a2.download='relatorio_torre_olimpo_'+todayStr+'.html';
-  document.body.appendChild(a2);a2.click();document.body.removeChild(a2);
-  setTimeout(()=>URL.revokeObjectURL(url),5000);
-  document.getElementById('preview-area').innerHTML=`<div class="succ-banner"><i class="ti ti-circle-check" aria-hidden="true"></i><div>Relatório gerado com sucesso!<br><small>${andSel.length} andares · ${tot} serviços · Abra o arquivo e use "Imprimir" para salvar como PDF.</small></div></div>`;
+  const win=window.open('','_blank');
+  if(!win){ showToast('Permita pop-ups para abrir o relatório.','error'); return; }
+  win.document.open();
+  win.document.write(htmlRel);
+  win.document.close();
+  document.getElementById('preview-area').innerHTML=`<div class="succ-banner"><i class="ti ti-circle-check" aria-hidden="true"></i><div>Relatório aberto em nova aba!<br><small>${andSel.length} andares · ${tot} serviços · Use "Imprimir" (Ctrl+P) para salvar como PDF.</small></div></div>`;
 }
 
 // ── Lightbox ──────────────────────────────────────────────────
