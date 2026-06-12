@@ -1012,13 +1012,14 @@ function gerarRelatorio(){
         }).join('');
         if(imgs) ftsH='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;width:100%">'+imgs+'</div>';
       }
-      return'<tr style="border-bottom:1px solid #F0F0F0;vertical-align:top">'
-        +'<td style="padding:10px 12px;font-size:13px;min-width:150px">'+e+'</td>'
+      const hasDetails=(obsH||ftsH);
+      return'<tr style="border-bottom:'+(hasDetails?'none':'1px solid #F0F0F0')+';vertical-align:middle">'
+        +'<td style="padding:10px 12px;font-size:13px">'+e+'</td>'
         +'<td style="padding:10px 12px"><span style="background:'+sBg[s]+';color:'+sCol[s]+';font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px">'+sLbl[s]+'</span></td>'
         +'<td style="padding:10px 12px;font-size:12px;color:#616161">'+prevF+'</td>'
         +'<td style="padding:10px 12px;font-size:12px;color:'+(s==='concluido'?'#1B5E20':'#616161')+';font-weight:'+(s==='concluido'?700:400)+'">'+conclF+'</td>'
-        +'<td style="padding:10px 12px;width:55%">'+obsH+ftsH+'</td>'
-        +'</tr>';
+        +'</tr>'
+        +(hasDetails?'<tr style="border-bottom:1px solid #F0F0F0"><td colspan="4" style="padding:0 14px 14px 14px">'+obsH+ftsH+'</td></tr>':'');
     }).join('');
     body+='<div style="page-break-inside:avoid;margin-bottom:24px">'
       +'<div style="background:#1A237E;color:#fff;padding:13px 18px;border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:space-between">'
@@ -1033,8 +1034,7 @@ function gerarRelatorio(){
       +'<th style="padding:9px 12px;text-align:left;font-size:11px;color:#757575;font-weight:700;text-transform:uppercase;letter-spacing:.3px">Status</th>'
       +'<th style="padding:9px 12px;text-align:left;font-size:11px;color:#757575;font-weight:700;text-transform:uppercase;letter-spacing:.3px">Previsto</th>'
       +'<th style="padding:9px 12px;text-align:left;font-size:11px;color:#757575;font-weight:700;text-transform:uppercase;letter-spacing:.3px">Conclusão</th>'
-      +'<th style="padding:9px 12px;text-align:left;font-size:11px;color:#757575;font-weight:700;text-transform:uppercase;letter-spacing:.3px">Detalhes</th>'
-      +'</tr></thead>'
+            +'</tr></thead>'
       +'<tbody>'+rows+'</tbody></table></div>';
   });
 
