@@ -408,8 +408,8 @@ img{display:block}
 // ═══════════════════════════════════════════════════════════════
 //  CONFIGURAÇÃO FIXA — definida na hospedagem e no Drive
 // ═══════════════════════════════════════════════════════════════
-const GAS_URL  = 'https://script.google.com/macros/s/AKfycbxLSX-E2Wfg2TncmcqWqeEtfKyPs8kAvRpHe5Kt48yM2RdRQ05gHv9Ms3hpNwCyiotW7w/exec';
-
+const GAS_URL  = 'https://script.google.com/macros/s/AKfycbxUV4jCmK9BX3plKoL-nqh00LYJxjEy7OGKgluYB5QCffomOswvui_IIMzVjhrBNnWnVQ/exec';
+const SHEET_ID = '1gUuKMISwMk2AKMn6S7jS2bZaNs6_g867noSWs1Ogw-U';
 
 // ── Login / Sessão ────────────────────────────────────────────
 // Sessão salva no localStorage (permanente no dispositivo)
@@ -974,7 +974,7 @@ function driveViewUrl(url){
   return url; // URL desconhecida, retorna como está
 }
 
-async function gerarRelatorio(){
+function gerarRelatorio(){
   const titulo=document.getElementById('rel-titulo').value||'Relatório de Serviços — Torre Olimpo';
   const resp=document.getElementById('rel-resp').value;
   const incFotos=document.getElementById('rel-fotos').checked;
@@ -985,40 +985,6 @@ async function gerarRelatorio(){
   const andSel=ANDARES.filter((_,i)=>{ const cb=document.getElementById('rc'+i);return cb&&cb.checked; });
   if(!andSel.length){showToast('Selecione pelo menos um andar.','error');return;}
 
-  // ── Coleta todos os fileIds das fotos dos andares selecionados ──
-  let fileIds=[];
-  if(incFotos){
-    andSel.forEach(a=>ETAPAS.forEach(e=>{
-      const d=D[key(a,e)]||{};
-      (d.fotos||[]).forEach(f=>{ if(f.fileId) fileIds.push(f.fileId); });
-    }));
-    fileIds=[...new Set(fileIds)]; // remove duplicatas
-  }
-
-  // ── Exibe loading ─────────────────────────────────────────────
-  const btn=document.querySelector('.gen-btn');
-  const prevArea=document.getElementById('preview-area');
-  btn.disabled=true;
-  if(incFotos&&fileIds.length){
-    btn.innerHTML='<i class="ti ti-loader-2 spin" aria-hidden="true"></i> Buscando '+fileIds.length+' foto(s)...';
-    prevArea.innerHTML='<div style="text-align:center;padding:20px;color:var(--text2);font-size:13px"><i class="ti ti-cloud-download" style="font-size:24px;display:block;margin-bottom:8px;color:var(--navy)"></i>Carregando fotos do Drive...<br><small>Isso pode levar alguns segundos</small></div>';
-  } else {
-    btn.innerHTML='<i class="ti ti-loader-2 spin" aria-hidden="true"></i> Gerando...';
-  }
-
-  // ── Busca base64 das fotos via GAS ────────────────────────────
-  let b64map={}; // { fileId: "data:image/jpeg;base64,..." }
-  if(incFotos&&fileIds.length){
-    try{
-      const res=await apiPost({acao:'fotosBase64',fileIds});
-      if(res.ok&&res.data&&res.data.fotos) b64map=res.data.fotos;
-    }catch(ex){
-      console.warn('Erro ao buscar fotos:',ex);
-      showToast('Aviso: fotos não carregadas','error');
-    }
-  }
-
-  // ── Monta o corpo do relatório ────────────────────────────────
   let tot=0,conc=0,atr=0;
   andSel.forEach(a=>ETAPAS.forEach(e=>{tot++;const s=getS(a,e);if(s==='concluido')conc++;if(s==='atrasado')atr++;}));
   const sBg={concluido:'#E8F5E9',andamento:'#FFF3E0',atrasado:'#FFEBEE',pendente:'#F5F5F5'};
@@ -1036,10 +1002,11 @@ async function gerarRelatorio(){
       let ftsH='';
       if(incFotos&&d.fotos&&d.fotos.length){
         const imgs=d.fotos.map(f=>{
-          // Prioridade: base64 buscado do Drive > src local (se ainda na memória)
-          const src=b64map[f.fileId]||f.src||'';
+          // Usa a URL de thumbnail do Drive (já pública via ANYONE_WITH_LINK no GAS)
+          // Fallback para src base64 se a foto ainda não foi enviada ao Drive
+          const src=f.url||f.src||'';
           if(!src) return '';
-          return '<img src="'+src+'" style="width:110px;height:82px;object-fit:cover;border-radius:6px;border:1px solid #E0E0E0">';
+          return '<img src="'+src+'" style="width:110px;height:82px;object-fit:cover;border-radius:6px;border:1px solid #E0E0E0" onerror="this.style.display=\'none\'">';
         }).join('');
         if(imgs) ftsH='<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:9px">'+imgs+'</div>';
       }
@@ -1089,15 +1056,11 @@ async function gerarRelatorio(){
     +'</div></body></html>';
 
   const win=window.open('','_blank');
-  if(!win){ showToast('Permita pop-ups para abrir o relatório.','error'); btn.disabled=false; btn.innerHTML='<i class="ti ti-file-download" aria-hidden="true"></i> Gerar relatório PDF'; return; }
+  if(!win){ showToast('Permita pop-ups para abrir o relatório.','error'); return; }
   win.document.open();
   win.document.write(htmlRel);
   win.document.close();
-
-  btn.disabled=false;
-  btn.innerHTML='<i class="ti ti-file-download" aria-hidden="true"></i> Gerar relatório PDF';
-  const fotosMsg=incFotos&&fileIds.length?' · '+fileIds.length+' foto(s) incluída(s)':'';
-  prevArea.innerHTML='<div class="succ-banner"><i class="ti ti-circle-check" aria-hidden="true"></i><div>Relatório aberto em nova aba!<br><small>'+andSel.length+' andares · '+tot+' serviços'+fotosMsg+' · Use "Imprimir" (Ctrl+P) para salvar como PDF.</small></div></div>';
+  document.getElementById('preview-area').innerHTML='<div class="succ-banner"><i class="ti ti-circle-check" aria-hidden="true"></i><div>Relatório aberto em nova aba!<br><small>'+andSel.length+' andares · '+tot+' serviços · Use "Imprimir" (Ctrl+P) para salvar como PDF.</small></div></div>';
 }
 
 // ── Lightbox ──────────────────────────────────────────────────
