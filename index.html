@@ -408,7 +408,7 @@ img{display:block}
 // ═══════════════════════════════════════════════════════════════
 //  CONFIGURAÇÃO FIXA — definida na hospedagem e no Drive
 // ═══════════════════════════════════════════════════════════════
-const GAS_URL  = 'https://script.google.com/macros/s/AKfycbxjqYBR5TMxsnbDbunO8mk1-560tCRL1njrNGHuJXEU4LHrcCqlTcmJmj-d4zBxuinIvg/exec';
+const GAS_URL  = 'https://script.google.com/macros/s/AKfycbxUV4jCmK9BX3plKoL-nqh00LYJxjEy7OGKgluYB5QCffomOswvui_IIMzVjhrBNnWnVQ/exec';
 const SHEET_ID = '1gUuKMISwMk2AKMn6S7jS2bZaNs6_g867noSWs1Ogw-U';
 
 // ── Login / Sessão ────────────────────────────────────────────
@@ -483,21 +483,17 @@ const _sty=document.createElement('style');
 _sty.textContent='@keyframes spin{to{transform:rotate(360deg)}}';
 document.head.appendChild(_sty);
 
-// ── Dados estáticos (fallback / default) ─────────────────────
-const DEFAULT_ANDARES = ['Lobby','3° Andar','4° Andar','5° Andar','6° Andar','7° Andar','8° Andar','9° Andar','10° Andar','11° Andar','12° Andar','13° Andar','14° Andar','15° Andar','16° Andar','17° Andar','18° Andar','19° Andar','20° Andar','21° Andar','22° Andar','23° Andar','24° Andar','25° Andar','26° Andar','27° Andar','28° Andar','29° Andar'];
-const DEFAULT_ETAPAS  = ['Abertura da parede','Fechamento shaft','Fechamento parede','Fechamento lógica','Pintura'];
-const DEFAULT_DATAS   = {'Lobby':'2026-06-02','3° Andar':'2026-06-02','4° Andar':'2026-06-03','5° Andar':'2026-06-04','6° Andar':'2026-06-05','7° Andar':'2026-06-06','8° Andar':'2026-06-07','9° Andar':'2026-06-08','10° Andar':'2026-06-09','11° Andar':'2026-06-10','12° Andar':'2026-06-11','13° Andar':'2026-06-12','14° Andar':'2026-06-13','15° Andar':'2026-06-14','16° Andar':'2026-06-15','17° Andar':'2026-06-16','18° Andar':'2026-06-17','19° Andar':'2026-06-18','20° Andar':'2026-06-19','21° Andar':'2026-06-20','22° Andar':'2026-06-21','23° Andar':'2026-06-22','24° Andar':'2026-06-23','25° Andar':'2026-06-24','26° Andar':'2026-06-25','27° Andar':'2026-06-26','28° Andar':'2026-06-27','29° Andar':'2026-06-28'};
+// ── Dados dinâmicos — carregados da planilha ──────────────────
+// ICONS: mapa etapa→ícone Tabler; etapas não mapeadas usam ti-tool
 const ICONS = {'Abertura da parede':'ti-wall','Fechamento shaft':'ti-door','Fechamento parede':'ti-barrier-block','Fechamento lógica':'ti-plug-connected','Pintura':'ti-paint'};
 
-let ANDARES = [...DEFAULT_ANDARES];
-let ETAPAS  = [...DEFAULT_ETAPAS];
-let DATAS   = {...DEFAULT_DATAS};
-
-const today = new Date(); today.setHours(0,0,0,0);
-const todayStr = today.toISOString().slice(0,10);
-document.getElementById('today-label').textContent = today.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+let ANDARES = [];
+let ETAPAS  = [];
+let DATAS   = {};
 
 // ── Estado local ──────────────────────────────────────────────
+const today    = new Date(); today.setHours(0,0,0,0);
+const todayStr = today.toISOString().slice(0,10);
 let D = {}; // { "Andar::Etapa": { status, dataConclusao, obs, fotos:[] } }
 
 function key(a,e){ return a+'::'+e; }
@@ -537,6 +533,37 @@ function fpct(a){
   let d=0;
   ETAPAS.forEach(e=>{ if(getS(a,e)==='concluido') d++; });
   return Math.round(d/ETAPAS.length*100);
+}
+
+// ── Utilitário: normaliza qualquer valor de data para "YYYY-MM-DD" ─
+// Aceita: string ISO, string DD/MM/YYYY, número serial do Sheets/Excel,
+//         objeto Date serializado, ou vazio (devolve todayStr como fallback)
+function parseDateStr(val){
+  if(!val && val !== 0) return todayStr;
+
+  // Número serial do Sheets/Excel (dias desde 30/12/1899)
+  if(typeof val === 'number'){
+    const d = new Date(Date.UTC(1899, 11, 30) + val * 86400000);
+    return d.toISOString().slice(0,10);
+  }
+
+  const s = String(val).trim();
+  if(!s) return todayStr;
+
+  // Já está no formato YYYY-MM-DD (possivelmente com T e fuso)
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+
+  // Formato DD/MM/YYYY
+  if(/^\d{2}\/\d{2}\/\d{4}/.test(s)){
+    const [d,m,y] = s.split('/');
+    return `${y}-${m}-${d}`;
+  }
+
+  // Tenta parse genérico como último recurso
+  const d = new Date(s);
+  if(!isNaN(d)) return d.toISOString().slice(0,10);
+
+  return todayStr; // fallback seguro
 }
 
 // ── Sync bar ──────────────────────────────────────────────────
@@ -581,8 +608,7 @@ async function loadFromSheets(forceNotify=false){
       ANDARES = andares.map(a => a.Andar);
       DATAS   = {};
       andares.forEach(a => {
-        // DataPrevista pode vir como "2026-06-02T00:00:00.000Z" ou "2026-06-02"
-        DATAS[a.Andar] = (a.DataPrevista || todayStr).split('T')[0];
+        DATAS[a.Andar] = parseDateStr(a.DataPrevista);
       });
     }
     if(etapas && etapas.length){
@@ -826,7 +852,7 @@ function renderAndamento(){
         <div class="eico" style="background:${inf.bg}"><i class="ti ${ICONS[e]||'ti-tool'}" style="color:${inf.col}" aria-hidden="true"></i></div>
         <div class="einfo">
           <div class="ename">${e}${pc>0?` <span class="pcbadge"><i class="ti ti-photo" style="font-size:9px" aria-hidden="true"></i> ${pc}</span>`:''}</div>
-          <div class="edate">Prev: ${prevF}${isT?' <span class="todaytag">hoje</span>':''}${d.dataConclusao?' · Concl: '+new Date(d.dataConclusao+'T12:00:00').toLocaleDateString('pt-BR'):''}</div>
+          <div class="edate">Prev: ${prevF}${isT?' <span class="todaytag">hoje</span>':''}${d.dataConclusao?' · Concl: '+new Date(parseDateStr(d.dataConclusao)+'T12:00:00').toLocaleDateString('pt-BR'):''}</div>
         </div>
         <div class="eacts">${th}<span class="sbadge ${inf.c}">${inf.l}</span>
           <button class="btr ${s==='concluido'?'done':''}" onclick="toggleCheck('${a}','${e}')" aria-label="Concluir">
@@ -936,6 +962,18 @@ function renderRelChecklist(){
 function selAll(v){ ANDARES.forEach((_,i)=>{ const cb=document.getElementById('rc'+i);if(cb)cb.checked=v; }); }
 function selConcluidos(){ ANDARES.forEach((a,i)=>{ const cb=document.getElementById('rc'+i);if(cb)cb.checked=fpct(a)===100; }); }
 
+// Converte qualquer URL do Drive para o formato de exibição direta
+// Suporta: /file/d/ID/view, /open?id=ID, /uc?id=ID, e base64 (retorna sem modificar)
+function driveViewUrl(url){
+  if(!url) return '';
+  if(url.startsWith('data:')) return url; // base64 local, já ok
+  // Extrai o fileId de qualquer formato de link do Drive
+  let m = url.match(/\/file\/d\/([^\/\?&]+)/);
+  if(!m) m = url.match(/[?&]id=([^&]+)/);
+  if(m && m[1]) return 'https://drive.google.com/uc?export=view&id=' + m[1];
+  return url; // URL desconhecida, retorna como está
+}
+
 function gerarRelatorio(){
   const titulo=document.getElementById('rel-titulo').value||'Relatório de Serviços — Torre Olimpo';
   const resp=document.getElementById('rel-resp').value;
@@ -946,6 +984,7 @@ function gerarRelatorio(){
   const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const andSel=ANDARES.filter((_,i)=>{ const cb=document.getElementById('rc'+i);return cb&&cb.checked; });
   if(!andSel.length){showToast('Selecione pelo menos um andar.','error');return;}
+
   let tot=0,conc=0,atr=0;
   andSel.forEach(a=>ETAPAS.forEach(e=>{tot++;const s=getS(a,e);if(s==='concluido')conc++;if(s==='atrasado')atr++;}));
   const sBg={concluido:'#E8F5E9',andamento:'#FFF3E0',atrasado:'#FFEBEE',pendente:'#F5F5F5'};
@@ -958,68 +997,70 @@ function gerarRelatorio(){
       const d=D[key(a,e)]||{};const s=getS(a,e);
       if(!incPen&&s==='pendente') return '';
       const prevF=new Date((DATAS[a]||todayStr)+'T00:00:00').toLocaleDateString('pt-BR');
-      const conclF=d.dataConclusao?new Date(d.dataConclusao+'T12:00:00').toLocaleDateString('pt-BR'):'—';
-      const obsH=incObs&&d.obs?`<div style="background:#F8F9FA;border-left:3px solid #CFD8DC;padding:7px 11px;margin-top:7px;border-radius:0 4px 4px 0;font-size:12px;color:#455A64"><b>Obs:</b> ${d.obs}</div>`:'';
-      const ftsH=incFotos&&d.fotos&&d.fotos.length?`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:9px">${d.fotos.map(f=>`<img src="${f.src}" style="width:110px;height:82px;object-fit:cover;border-radius:6px;border:1px solid #E0E0E0">`).join('')}</div>`:'';
-      return`<tr style="border-bottom:1px solid #F0F0F0;vertical-align:top">
-        <td style="padding:10px 12px;font-size:13px;min-width:150px">${e}</td>
-        <td style="padding:10px 12px"><span style="background:${sBg[s]};color:${sCol[s]};font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px">${sLbl[s]}</span></td>
-        <td style="padding:10px 12px;font-size:12px;color:#616161">${prevF}</td>
-        <td style="padding:10px 12px;font-size:12px;color:${s==='concluido'?'#1B5E20':'#616161'};font-weight:${s==='concluido'?700:400}">${conclF}</td>
-        <td style="padding:10px 12px">${obsH}${ftsH}</td>
-      </tr>`;
+      const conclF=d.dataConclusao?new Date(parseDateStr(d.dataConclusao)+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+      const obsH=incObs&&d.obs?'<div style="background:#F8F9FA;border-left:3px solid #CFD8DC;padding:7px 11px;margin-top:7px;border-radius:0 4px 4px 0;font-size:12px;color:#455A64"><b>Obs:</b> '+d.obs+'</div>':'';
+      let ftsH='';
+      if(incFotos&&d.fotos&&d.fotos.length){
+        const imgs=d.fotos.map(f=>{
+          // Usa a URL de thumbnail do Drive (já pública via ANYONE_WITH_LINK no GAS)
+          // Fallback para src base64 se a foto ainda não foi enviada ao Drive
+          const src=f.url||f.src||'';
+          if(!src) return '';
+          return '<img src="'+src+'" style="width:110px;height:82px;object-fit:cover;border-radius:6px;border:1px solid #E0E0E0" onerror="this.style.display=\'none\'">';
+        }).join('');
+        if(imgs) ftsH='<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:9px">'+imgs+'</div>';
+      }
+      return'<tr style="border-bottom:1px solid #F0F0F0;vertical-align:top">'
+        +'<td style="padding:10px 12px;font-size:13px;min-width:150px">'+e+'</td>'
+        +'<td style="padding:10px 12px"><span style="background:'+sBg[s]+';color:'+sCol[s]+';font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px">'+sLbl[s]+'</span></td>'
+        +'<td style="padding:10px 12px;font-size:12px;color:#616161">'+prevF+'</td>'
+        +'<td style="padding:10px 12px;font-size:12px;color:'+(s==='concluido'?'#1B5E20':'#616161')+';font-weight:'+(s==='concluido'?700:400)+'">'+conclF+'</td>'
+        +'<td style="padding:10px 12px">'+obsH+ftsH+'</td>'
+        +'</tr>';
     }).join('');
-    body+=`<div style="page-break-inside:avoid;margin-bottom:24px">
-      <div style="background:#1A237E;color:#fff;padding:13px 18px;border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:15px;font-weight:700">${a}</span>
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:12px;opacity:.8">${p}% concluído</span>
-          <div style="width:80px;height:5px;background:rgba(255,255,255,.25);border-radius:3px;overflow:hidden"><div style="width:${p}%;height:100%;background:#fff;border-radius:3px"></div></div>
-        </div>
-      </div>
-      <table style="width:100%;border-collapse:collapse;border:1px solid #E0E0E0;border-top:none;font-family:Arial,sans-serif">
-        <thead><tr style="background:#F5F5F5">
-          <th style="padding:9px 12px;text-align:left;font-size:11px;color:#757575;font-weight:700;text-transform:uppercase;letter-spacing:.3px">Serviço</th>
-          <th style="padding:9px 12px;text-align:left;font-size:11px;color:#757575;font-weight:700;text-transform:uppercase;letter-spacing:.3px">Status</th>
-          <th style="padding:9px 12px;text-align:left;font-size:11px;color:#757575;font-weight:700;text-transform:uppercase;letter-spacing:.3px">Previsto</th>
-          <th style="padding:9px 12px;text-align:left;font-size:11px;color:#757575;font-weight:700;text-transform:uppercase;letter-spacing:.3px">Conclusão</th>
-          <th style="padding:9px 12px;text-align:left;font-size:11px;color:#757575;font-weight:700;text-transform:uppercase;letter-spacing:.3px">Detalhes</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
+    body+='<div style="page-break-inside:avoid;margin-bottom:24px">'
+      +'<div style="background:#1A237E;color:#fff;padding:13px 18px;border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:space-between">'
+      +'<span style="font-size:15px;font-weight:700">'+a+'</span>'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+      +'<span style="font-size:12px;opacity:.8">'+p+'% concluído</span>'
+      +'<div style="width:80px;height:5px;background:rgba(255,255,255,.25);border-radius:3px;overflow:hidden"><div style="width:'+p+'%;height:100%;background:#fff;border-radius:3px"></div></div>'
+      +'</div></div>'
+      +'<table style="width:100%;border-collapse:collapse;border:1px solid #E0E0E0;border-top:none;font-family:Arial,sans-serif">'
+      +'<thead><tr style="background:#F5F5F5">'
+      +'<th style="padding:9px 12px;text-align:left;font-size:11px;color:#757575;font-weight:700;text-transform:uppercase;letter-spacing:.3px">Serviço</th>'
+      +'<th style="padding:9px 12px;text-align:left;font-size:11px;color:#757575;font-weight:700;text-transform:uppercase;letter-spacing:.3px">Status</th>'
+      +'<th style="padding:9px 12px;text-align:left;font-size:11px;color:#757575;font-weight:700;text-transform:uppercase;letter-spacing:.3px">Previsto</th>'
+      +'<th style="padding:9px 12px;text-align:left;font-size:11px;color:#757575;font-weight:700;text-transform:uppercase;letter-spacing:.3px">Conclusão</th>'
+      +'<th style="padding:9px 12px;text-align:left;font-size:11px;color:#757575;font-weight:700;text-transform:uppercase;letter-spacing:.3px">Detalhes</th>'
+      +'</tr></thead>'
+      +'<tbody>'+rows+'</tbody></table></div>';
   });
-  const htmlRel=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${titulo}</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#F5F5F5;color:#212121;padding:20px}@media print{body{background:#fff;padding:0}.noprint{display:none}}</style>
-</head><body>
-<div style="max-width:900px;margin:0 auto">
-  <div style="background:#1A237E;color:#fff;padding:24px 28px;border-radius:10px;margin-bottom:22px">
-    <h1 style="font-size:20px;font-weight:700;margin-bottom:8px">${titulo}</h1>
-    <div style="font-size:13px;opacity:.85;display:flex;flex-wrap:wrap;gap:16px">
-      <span>Emitido em: ${dataNow} às ${hora}</span>
-      ${resp?`<span>Responsável: ${resp}</span>`:''}
-      <span>Andares selecionados: ${andSel.length}</span>
-    </div>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px">
-    <div style="background:#E8F5E9;border-radius:8px;padding:16px;text-align:center"><div style="font-size:11px;color:#1B5E20;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px">Concluídos</div><div style="font-size:30px;font-weight:700;color:#1B5E20">${conc}</div><div style="font-size:11px;color:#2E7D32">${Math.round(conc/tot*100)}% do total</div></div>
-    <div style="background:#FFEBEE;border-radius:8px;padding:16px;text-align:center"><div style="font-size:11px;color:#7F0000;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px">Atrasados</div><div style="font-size:30px;font-weight:700;color:#7F0000">${atr}</div><div style="font-size:11px;color:#B71C1C">${Math.round(atr/tot*100)}% do total</div></div>
-    <div style="background:#E8EAF6;border-radius:8px;padding:16px;text-align:center"><div style="font-size:11px;color:#283593;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px">Total serviços</div><div style="font-size:30px;font-weight:700;color:#283593">${tot}</div><div style="font-size:11px;color:#3949AB">${andSel.length} andares</div></div>
-  </div>
-  ${body}
-  <div style="margin-top:24px;padding-top:14px;border-top:1px solid #E0E0E0;text-align:center;font-size:11px;color:#9E9E9E">Torre Olimpo · ${dataNow} às ${hora}${resp?' · '+resp:''}</div>
-</div>
-<div class="noprint" style="position:fixed;bottom:20px;right:20px">
-  <button onclick="window.print()" style="background:#1A237E;color:#fff;border:none;padding:12px 22px;border-radius:10px;font-size:14px;cursor:pointer;font-weight:700;font-family:Arial">Imprimir / Salvar PDF</button>
-</div>
-</body></html>`;
-  const blob=new Blob([htmlRel],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a2=document.createElement('a');
-  a2.href=url;a2.download='relatorio_torre_olimpo_'+todayStr+'.html';
-  document.body.appendChild(a2);a2.click();document.body.removeChild(a2);
-  setTimeout(()=>URL.revokeObjectURL(url),5000);
-  document.getElementById('preview-area').innerHTML=`<div class="succ-banner"><i class="ti ti-circle-check" aria-hidden="true"></i><div>Relatório gerado com sucesso!<br><small>${andSel.length} andares · ${tot} serviços · Abra o arquivo e use "Imprimir" para salvar como PDF.</small></div></div>`;
+
+  const htmlRel='<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+titulo+'</title>'
+    +'<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#F5F5F5;color:#212121;padding:20px}@media print{body{background:#fff;padding:0}.noprint{display:none}img{max-width:100%;page-break-inside:avoid}tr{page-break-inside:avoid}}</style>'
+    +'</head><body><div style="max-width:900px;margin:0 auto">'
+    +'<div style="background:#1A237E;color:#fff;padding:24px 28px;border-radius:10px;margin-bottom:22px">'
+    +'<h1 style="font-size:20px;font-weight:700;margin-bottom:8px">'+titulo+'</h1>'
+    +'<div style="font-size:13px;opacity:.85;display:flex;flex-wrap:wrap;gap:16px">'
+    +'<span>Emitido em: '+dataNow+' às '+hora+'</span>'
+    +(resp?'<span>Responsável: '+resp+'</span>':'')
+    +'<span>Andares selecionados: '+andSel.length+'</span></div></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px">'
+    +'<div style="background:#E8F5E9;border-radius:8px;padding:16px;text-align:center"><div style="font-size:11px;color:#1B5E20;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px">Concluídos</div><div style="font-size:30px;font-weight:700;color:#1B5E20">'+conc+'</div><div style="font-size:11px;color:#2E7D32">'+Math.round(conc/tot*100)+'% do total</div></div>'
+    +'<div style="background:#FFEBEE;border-radius:8px;padding:16px;text-align:center"><div style="font-size:11px;color:#7F0000;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px">Atrasados</div><div style="font-size:30px;font-weight:700;color:#7F0000">'+atr+'</div><div style="font-size:11px;color:#B71C1C">'+Math.round(atr/tot*100)+'% do total</div></div>'
+    +'<div style="background:#E8EAF6;border-radius:8px;padding:16px;text-align:center"><div style="font-size:11px;color:#283593;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px">Total serviços</div><div style="font-size:30px;font-weight:700;color:#283593">'+tot+'</div><div style="font-size:11px;color:#3949AB">'+andSel.length+' andares</div></div>'
+    +'</div>'+body
+    +'<div style="margin-top:24px;padding-top:14px;border-top:1px solid #E0E0E0;text-align:center;font-size:11px;color:#9E9E9E">Torre Olimpo · '+dataNow+' às '+hora+(resp?' · '+resp:'')+'</div>'
+    +'</div><div class="noprint" style="position:fixed;bottom:20px;right:20px">'
+    +'<button onclick="window.print()" style="background:#1A237E;color:#fff;border:none;padding:12px 22px;border-radius:10px;font-size:14px;cursor:pointer;font-weight:700;font-family:Arial">Imprimir / Salvar PDF</button>'
+    +'</div></body></html>';
+
+  const win=window.open('','_blank');
+  if(!win){ showToast('Permita pop-ups para abrir o relatório.','error'); return; }
+  win.document.open();
+  win.document.write(htmlRel);
+  win.document.close();
+  document.getElementById('preview-area').innerHTML='<div class="succ-banner"><i class="ti ti-circle-check" aria-hidden="true"></i><div>Relatório aberto em nova aba!<br><small>'+andSel.length+' andares · '+tot+' serviços · Use "Imprimir" (Ctrl+P) para salvar como PDF.</small></div></div>';
 }
 
 // ── Lightbox ──────────────────────────────────────────────────
@@ -1058,8 +1099,12 @@ function showPage(n){
 function renderAll(){renderAndamento();renderDashboard();renderAlertas();renderFotos();}
 
 // ── Init ──────────────────────────────────────────────────────
-initD();
-renderAll();
+document.getElementById('today-label').textContent = today.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+
+// Mostra estado vazio enquanto aguarda a planilha
+document.getElementById('and-list').innerHTML =
+  '<div class="empty"><i class="ti ti-cloud-download" style="color:var(--navy);opacity:.5" aria-hidden="true"></i><p>Carregando dados da planilha...</p></div>';
+
 if(checkSession()){
   loadFromSheets();
 }
